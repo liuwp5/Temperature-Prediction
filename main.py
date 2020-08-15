@@ -41,7 +41,7 @@ def data_generator(data, look_back, future_step, batch_size, shuffle=False):
 		yield np.swapaxes(batch, 0, 1)[:,:,0:5], target
 
 # Please revise these function for generating submission
-def test_model(model, test_XY, device, num_test_batch, epoch):
+def test_model(model, test_XY, device, num_test_batch, epoch, sigma, average):
 	output = np.array([])
 	target = np.array([])
 	for batch in range(num_test_batch):
@@ -51,18 +51,22 @@ def test_model(model, test_XY, device, num_test_batch, epoch):
 		Y_predict, _ = model(test_X, state)
 		output = np.append(output, np.array(Y_predict.detach().cpu(), dtype=float))
 		target = np.append(target, test_Y)
+
+	# output = output * sigma + average
+	target = target * sigma + average
+
 	# calculate MSE
 	MSE = np.mean(np.square(output - target))
 	
-	# if epoch == 999:
-	# 	print('###The predicted temperature in epoch %s are: %s'%(epoch, str(output)))
+	if epoch == 199:
+		print('###The predicted temperature in epoch %s are: %s'%(epoch, str(output)))
 	print('###The MSE in epoch %s is: %.6f'%(epoch, MSE))
 	print('\n')
 
 
 
 def train_test_model(model, train_XY, test_XY, num_train_batch, num_test_batch, num_epoch, lr,
-				device, pre_step):
+				device, pre_step, sigma, average):
 	criterion = nn.MSELoss()
 	optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 	model.to(device)
@@ -77,6 +81,9 @@ def train_test_model(model, train_XY, test_XY, num_train_batch, num_test_batch, 
 			state = None
 			output, _ = model(train_X, state)
 			train_Y = torch.tensor(train_Y, dtype=torch.float32, device=device)
+			# # Add
+			train_Y = train_Y * sigma + average
+
 			loss = criterion(output, train_Y)
 			optimizer.zero_grad()
 			loss.backward()
@@ -99,7 +106,7 @@ def train_test_model(model, train_XY, test_XY, num_train_batch, num_test_batch, 
 		print('-------------')
 
 		if (epoch + 1) % pre_step == 0:
-			test_model(model, test_XY, device, num_test_batch, epoch)
+			test_model(model, test_XY, device, num_test_batch, epoch, sigma, average)
 	
 
 def parse():
@@ -112,7 +119,7 @@ def parse():
 		help='batch size in each batch')
 	# parser.add_argument('--sql', type=int, default=48,
 	# 	help='length of the sequence')
-	parser.add_argument('--num_epoch', type=int, default=1000,
+	parser.add_argument('--num_epoch', type=int, default=100,
 		help='number of epoch')
 	parser.add_argument('--lr', type=float, default=0.01,
 		help='learning rate')
@@ -122,9 +129,9 @@ def parse():
 		help='number of samples in the past used to predict the temperature')
 	parser.add_argument('--future_step', type=int, default=1,
 		help='which future time stamp should the model predict')
-	parser.add_argument('--train_path', type=str, default='./train/train',
+	parser.add_argument('--train_path', type=str, default='./train/train0',
 		help='the path of the file for generating training set')
-	parser.add_argument('--validate_path', type=str, default='./train/validate',
+	parser.add_argument('--validate_path', type=str, default='./train/validate0',
 		help='the path of the file for generating validating set')
 	parser.add_argument('--test_path', type=str, default='./test/test',
 		help='the path of the file for generating testing set')
@@ -136,6 +143,10 @@ def parse():
 		help='whether to randomly generate the data for validating')
 	parser.add_argument('--shuffle_test', type=bool, default=False,
 		help='whether to randomly generate the data for testing')
+	parser.add_argument('--average', type=float, default=16.534820588235302,
+		help='return to real temperature')
+	parser.add_argument('--sigma', type=float, default=4.071784519555742,
+		help='return to real temperature')
 
 	return parser.parse_args()
 
@@ -158,6 +169,9 @@ def main():
 	shuffle_train = parser.shuffle_train
 	shuffle_validate = parser.shuffle_validate
 	shuffle_test = parser.shuffle_test
+
+	average = parser.average
+	sigma = parser.sigma
 
 	### generate the training set, validating set and test set
 	train_set = []
@@ -199,7 +213,7 @@ def main():
 		num_validate_batch = (len(validate_set) - look_back - future_step) // batch_size + 1
 
 		train_test_model(model, train_XY, validate_XY, num_train_batch, num_validate_batch,
-							 num_epoch, lr, device, pre_step)
+							 num_epoch, lr, device, pre_step, sigma, average)
 
 
 
