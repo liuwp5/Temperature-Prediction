@@ -38,7 +38,7 @@ def data_generator(data, look_back, future_step, batch_size, shuffle=False):
 			indices = range(rows[j]-look_back, rows[j])
 			batch[j] = data[indices]
 			target[j] = data[rows[j]][-1]
-		yield np.swapaxes(batch, 0, 1)[0:5], target
+		yield np.swapaxes(batch, 0, 1)[:,:,0:5], target
 
 # Please revise these function for generating submission
 def test_model(model, test_XY, device, num_test_batch, epoch):
@@ -106,7 +106,7 @@ def parse():
 	parser = argparse.ArgumentParser(description='Predicting temperature.')
 	parser.add_argument('--hidden_size', type=int, default=8, 
 		help='number of neurons in the hidden layer')
-	parser.add_argument('--num_feature', type=int, default=6,
+	parser.add_argument('--num_feature', type=int, default=5,
 		help='number of features of the input')
 	parser.add_argument('--batch_size', type=int, default=128,
 		help='batch size in each batch')

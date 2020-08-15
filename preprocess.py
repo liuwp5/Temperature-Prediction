@@ -126,23 +126,28 @@ for i in range(0, total_samples, sample_steps):
 	else:
 		validate_set.append(samples[i])
 
-
 train_set = np.stack(train_set)
 validate_set = np.stack(validate_set)
+
+print('here!')
+# Add standardization
+average = np.mean(train_set, axis=0)
+sigma = np.std(train_set, axis=0)
+train_set = (train_set - average) / sigma
 
 print('writing...')
 
 
-with open('./train/train', 'a', encoding='utf-8') as f:
+with open('./train/train0', 'a', encoding='utf-8') as f:
 	for _, line in enumerate(train_set):
 		f.write(line[0])
 		for j in range(1, len(line)):
 			f.write(','+line[j])
 		f.write('\n')
 
-with open('./train/validate', 'a', encoding='utf-8') as f:
-	for _, line in enumerate(validate_set):
-		f.write(line[0])
-		for j in range(1, len(line)):
-			f.write(','+line[j])
-		f.write('\n')
+# with open('./train/validate0', 'a', encoding='utf-8') as f:
+# 	for _, line in enumerate(validate_set):
+# 		f.write(line[0])
+# 		for j in range(1, len(line)):
+# 			f.write(','+line[j])
+# 		f.write('\n')
