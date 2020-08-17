@@ -136,6 +136,9 @@ sigma = np.std(train_set.astype(float), axis=0)
 train_set = (train_set.astype(float) - average) / sigma
 validate_set = (validate_set.astype(float) - average) / sigma
 
+print('average:', average)
+print('sigma:', sigma)
+
 # train_set = train_set.round(decimals=4)
 # validate_set = validate_set.round(decimals=4)
 
