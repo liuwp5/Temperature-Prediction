@@ -39,7 +39,7 @@ def data_generator(data, look_back, future_step, batch_size, shuffle=False):
 			batch[j] = data[indices]
 			target[j] = data[rows[j]][-1]
 		yield np.swapaxes(batch, 0, 1)[:,:,0:5], target
-
+		# yield np.swapaxes(batch, 0, 1), target
 # Please revise these function for generating submission
 def test_model(model, test_XY, device, num_test_batch, epoch, sigma, average):
 	output = np.array([])
@@ -119,7 +119,7 @@ def parse():
 		help='batch size in each batch')
 	# parser.add_argument('--sql', type=int, default=48,
 	# 	help='length of the sequence')
-	parser.add_argument('--num_epoch', type=int, default=100,
+	parser.add_argument('--num_epoch', type=int, default=200,
 		help='number of epoch')
 	parser.add_argument('--lr', type=float, default=0.01,
 		help='learning rate')
