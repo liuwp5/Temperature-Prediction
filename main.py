@@ -19,14 +19,18 @@ def summit_test():
 
 # used for generating training data and validation data
 def data_generator(data, look_back, future_step, batch_size, shuffle=False):
+	# look_back: 48
+	# batch_size: 128
 	start = 0 + look_back
 	end = len(data) - future_step # [start, end)
-
+	# start += 128;	end not change
 	while True:
 		if shuffle:
 			rows = np.random.randint(start, end, size=batch_size)
 		else:
+			# len(rows): 128 or (end - start)
 			rows = range(start, min(start + batch_size, end))
+			# back to start
 			if start + batch_size >= end:
 				start = 0 + look_back
 			else:
@@ -35,10 +39,12 @@ def data_generator(data, look_back, future_step, batch_size, shuffle=False):
 		batch = np.zeros([len(rows), look_back, data.shape[-1]])
 		target = np.zeros([len(rows),])
 		for j, row in enumerate(rows):
-			indices = range(rows[j]-look_back, rows[j])
+			### key
+			indices = range(rows[j]-look_back, rows[j])	# range(48-48, 48) = range(0, 48) = [0, 47]
 			batch[j] = data[indices]
 			target[j] = data[rows[j]][-1]
-		yield np.swapaxes(batch, 0, 1)[:,:,0:5], target
+		yield np.swapaxes(batch, 0, 1)[:, :, 0:5], target
+		# (len, batch, feature):(48, 128, 5)
 		# yield np.swapaxes(batch, 0, 1), target
 # Please revise these function for generating submission
 def test_model(model, test_XY, device, num_test_batch, epoch, sigma, average):
