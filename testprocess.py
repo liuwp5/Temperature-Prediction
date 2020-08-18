@@ -24,8 +24,8 @@ for i, line in enumerate(f_content):
 
 samples = np.stack(samples)
 
-######## read validate0(last 47 lines)
-f1 = open('./train/validate0', encoding='utf-8')
+######## read validate(last 48 lines)
+f1 = open('./train/validate', encoding='utf-8')
 f1_content = f1.readlines()
 f1.close()
 
@@ -34,7 +34,7 @@ total_samples1 = len(f1_content)-1
 samples1 = []
 
 for i, line in enumerate(f1_content):
-    if i > total_samples1-47:
+    if i > total_samples1-48:
         current_line_split = line.strip().split(',')
         samples1.append(current_line_split)
 
@@ -92,22 +92,22 @@ for i in range(0, total_samples):
 test_set = np.stack(test_set)
 
 ############ Standardization
-average = [16.47363382, 73.27385588, 983.75472059, 71.73708676, 984.48064706, 0]
-sigma = [4.69977465, 17.58225747, 13.07809764, 15.12643684, 7.57291011, 1]
-# average = np.mean(test_set.astype(float), axis=0)
-# sigma = np.std(test_set.astype(float), axis=0)
+average = np.mean(test_set.astype(float), axis=0)
+sigma = np.std(test_set.astype(float), axis=0)
+average[5] = 0
+sigma[5] = 1
 test_set = (test_set.astype(float) - average) / sigma
-# print(test_set.shape)     # (407, 6)
+# print(test_set.shape)     # (406, 6)
 
-
-
-############ Add 48 validate
+print('average:', average)
+print('sigma:', sigma)
 
 
 # Writing
 print('writing...')
 
 with open('./test/test', 'a', encoding='utf-8') as f:
+    ############ Add 48 validate
     for _, line in enumerate(samples1):
         f.write(str(line[0]))
         for j in range(1, len(line)):

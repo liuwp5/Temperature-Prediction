@@ -148,15 +148,17 @@ print('sigma[5] =', sigma[5])
 # Writing
 print('writing...')
 
+print(train_set.shape)
+print(validate_set.shape)
 
-with open('./train/train0', 'a', encoding='utf-8') as f:
+with open('./train/train', 'a', encoding='utf-8') as f:
 	for _, line in enumerate(train_set):
 		f.write(str(line[0]))
 		for j in range(1, len(line)):
 			f.write(','+str(line[j]))
 		f.write('\n')
 
-with open('./train/validate0', 'a', encoding='utf-8') as f:
+with open('./train/validate', 'a', encoding='utf-8') as f:
 	for _, line in enumerate(validate_set):
 		f.write(str(line[0]))
 		for j in range(1, len(line)):

@@ -22,7 +22,8 @@ def data_generator(data, look_back, future_step, batch_size, shuffle=False):
 	# look_back: 48
 	# batch_size: 128
 	start = 0 + look_back
-	end = len(data) - future_step # [start, end)
+	end = len(data)  # [start, end)
+	# end = len(data) - future_step # [start, end)
 	# start += 128;	end not change
 	while True:
 		if shuffle:
@@ -58,6 +59,11 @@ def test_model(model, test_XY, device, num_test_batch, epoch, sigma, average):
 		output = np.append(output, np.array(Y_predict.detach().cpu(), dtype=float))
 		target = np.append(target, test_Y)
 
+	if epoch == -1:
+		print('len of output:', len(output))
+		print()
+		print('###Predicted Temperature:', str(output))
+		return 0
 	# output = output * sigma + average
 	target = target * sigma + average
 
@@ -68,6 +74,7 @@ def test_model(model, test_XY, device, num_test_batch, epoch, sigma, average):
 		print('###The predicted temperature in epoch %s are: %s'%(epoch, str(output)))
 	print('###The MSE in epoch %s is: %.6f'%(epoch, MSE))
 	print('\n')
+	return MSE
 
 
 
@@ -85,6 +92,8 @@ def train_test_model(model, train_XY, test_XY, num_train_batch, num_test_batch, 
 			train_X, train_Y = next(train_XY)
 			train_X = torch.tensor(train_X, dtype=torch.float32, device=device)
 			state = None
+			# train_X: (48, 128, 5)/(len, batch, feature)
+			# output: 128
 			output, _ = model(train_X, state)
 			train_Y = torch.tensor(train_Y, dtype=torch.float32, device=device)
 			# # Add
@@ -110,9 +119,10 @@ def train_test_model(model, train_XY, test_XY, num_train_batch, num_test_batch, 
 
 		print('###Training loss in epoch %s: %.6f'%(epoch, loss.item()))
 		print('-------------')
-
 		if (epoch + 1) % pre_step == 0:
-			test_model(model, test_XY, device, num_test_batch, epoch, sigma, average)
+			MSE = test_model(model, test_XY, device, num_test_batch, epoch, sigma, average)
+			if epoch > 100 and MSE < 0.15:
+				break
 	
 
 def parse():
@@ -125,7 +135,7 @@ def parse():
 		help='batch size in each batch')
 	# parser.add_argument('--sql', type=int, default=48,
 	# 	help='length of the sequence')
-	parser.add_argument('--num_epoch', type=int, default=200,
+	parser.add_argument('--num_epoch', type=int, default=1000,
 		help='number of epoch')
 	parser.add_argument('--lr', type=float, default=0.01,
 		help='learning rate')
@@ -135,9 +145,9 @@ def parse():
 		help='number of samples in the past used to predict the temperature')
 	parser.add_argument('--future_step', type=int, default=1,
 		help='which future time stamp should the model predict')
-	parser.add_argument('--train_path', type=str, default='./train/train0',
+	parser.add_argument('--train_path', type=str, default='./train/train',
 		help='the path of the file for generating training set')
-	parser.add_argument('--validate_path', type=str, default='./train/validate0',
+	parser.add_argument('--validate_path', type=str, default='./train/validate',
 		help='the path of the file for generating validating set')
 	parser.add_argument('--test_path', type=str, default='./test/test',
 		help='the path of the file for generating testing set')
@@ -197,30 +207,37 @@ def main():
 			validate_set.append(np.array(line_tuple, dtype=float))
 	validate_set = np.stack(validate_set)
 
+	with open(test_path, encoding='utf-8') as f:
+		content = f.readlines()
+		for line in content:
+			line_tuple = line.strip().split(',')
+			test_set.append(np.array(line_tuple, dtype=float))
+	test_set = np.stack(test_set)
 
+	### define model
 	device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 	rnn = nn.GRU(num_feature, hidden_size)
 	model = RNNModel(rnn, num_feature)
 	model.to(device)
 
-	if is_test:
-		with open(test_path, encoding='utf-8') as f:
-			content = f.readlines()
-			for line in content:
-				line_tuple = line.strip().split(',')
-				validate_set.append(np.array(line_tuple, dtype=float))
-			test_set = np.stack(test_set)
-	else:
-		train_XY = data_generator(train_set, look_back, future_step, batch_size, shuffle_train)
-		validate_XY = data_generator(validate_set, look_back, future_step, batch_size, shuffle_validate)
 
-		num_train_batch = (len(train_set) - look_back - future_step) // batch_size + 1
-		num_validate_batch = (len(validate_set) - look_back - future_step) // batch_size + 1
+	train_XY = data_generator(train_set, look_back, future_step, batch_size, shuffle_train)
+	validate_XY = data_generator(validate_set, look_back, future_step, batch_size, shuffle_validate)
+	test_XY = data_generator(test_set, look_back, future_step, batch_size, shuffle_test)
+	print(test_set.shape)
 
-		train_test_model(model, train_XY, validate_XY, num_train_batch, num_validate_batch,
-							 num_epoch, lr, device, pre_step, sigma, average)
+	num_train_batch = (len(train_set) - look_back - future_step) // batch_size + 1
+	num_validate_batch = (len(validate_set) - look_back - future_step) // batch_size + 1
+	num_test_batch = (len(test_set) - look_back - future_step) // batch_size + 1
 
+	### train
+	train_test_model(model, train_XY, validate_XY, num_train_batch, num_validate_batch,
+					num_epoch, lr, device, pre_step, sigma, average)
+	### predict
+	average = [21.37450246, 66.40841379, 978.12325123, 65.68641872, 972.8, 0]
+	sigma = [5.53711779, 18.65961706, 12.90049273, 16.56805456, 57.55419892, 1]
+	test_model(model, test_XY, device, num_test_batch, -1, sigma, average)
 
 
 
