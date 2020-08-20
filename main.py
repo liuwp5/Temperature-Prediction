@@ -14,8 +14,27 @@ def get_train_validate(train_path):
 def get_test(train_path, test_path):
 	pass
 
-def summit_test():
-	pass
+def summit_test(output):
+	f = open('./test/test.csv', encoding='utf-8')
+	f_content = f.readlines()
+	f.close()
+
+	samples = []
+
+	for i, line in enumerate(f_content):
+		if i >= 1:
+			current_line_split = line.strip().split(',')
+			samples.append(current_line_split[0])
+
+	samples = np.stack(samples)
+
+	with open('./test/summit.csv', 'w+', encoding='utf-8') as f:
+		f.write('time,temperature')
+		f.write('\n')
+		for i, line in enumerate(output):
+			f.write(str(samples[i]))
+			f.write(',' + str(line))
+			f.write('\n')
 
 # used for generating training data and validation data
 def data_generator(data, look_back, future_step, batch_size, shuffle=False):
@@ -63,9 +82,10 @@ def test_model(model, test_XY, device, num_test_batch, epoch, sigma, average):
 		print('len of output:', len(output))
 		print()
 		print('###Predicted Temperature:', str(output))
+		summit_test(output)
 		return 0
 	# output = output * sigma + average
-	target = target * sigma + average
+	# target = target * sigma + average
 
 	# calculate MSE
 	MSE = np.mean(np.square(output - target))
@@ -97,7 +117,7 @@ def train_test_model(model, train_XY, test_XY, num_train_batch, num_test_batch, 
 			output, _ = model(train_X, state)
 			train_Y = torch.tensor(train_Y, dtype=torch.float32, device=device)
 			# # Add
-			train_Y = train_Y * sigma + average
+			# train_Y = train_Y * sigma + average
 
 			loss = criterion(output, train_Y)
 			optimizer.zero_grad()
@@ -121,8 +141,8 @@ def train_test_model(model, train_XY, test_XY, num_train_batch, num_test_batch, 
 		print('-------------')
 		if (epoch + 1) % pre_step == 0:
 			MSE = test_model(model, test_XY, device, num_test_batch, epoch, sigma, average)
-			if epoch > 100 and MSE < 0.15:
-				break
+			# if epoch > 100 and MSE < 0.15:
+			# 	break
 	
 
 def parse():
@@ -135,7 +155,7 @@ def parse():
 		help='batch size in each batch')
 	# parser.add_argument('--sql', type=int, default=48,
 	# 	help='length of the sequence')
-	parser.add_argument('--num_epoch', type=int, default=1000,
+	parser.add_argument('--num_epoch', type=int, default=200,
 		help='number of epoch')
 	parser.add_argument('--lr', type=float, default=0.01,
 		help='learning rate')
@@ -145,7 +165,7 @@ def parse():
 		help='number of samples in the past used to predict the temperature')
 	parser.add_argument('--future_step', type=int, default=1,
 		help='which future time stamp should the model predict')
-	parser.add_argument('--train_path', type=str, default='./train/train',
+	parser.add_argument('--train_path', type=str, default='./train/train_validate',
 		help='the path of the file for generating training set')
 	parser.add_argument('--validate_path', type=str, default='./train/validate',
 		help='the path of the file for generating validating set')
@@ -235,8 +255,8 @@ def main():
 	train_test_model(model, train_XY, validate_XY, num_train_batch, num_validate_batch,
 					num_epoch, lr, device, pre_step, sigma, average)
 	### predict
-	average = [21.37450246, 66.40841379, 978.12325123, 65.68641872, 972.8, 0]
-	sigma = [5.53711779, 18.65961706, 12.90049273, 16.56805456, 57.55419892, 1]
+	average = [18.07636863, 71.85216879, 982.82304936, 70.41442357, 980.7735828, 0]
+	sigma = [5.23379147, 17.51692138, 9.954381, 15.24855444, 33.68555629, 1]
 	test_model(model, test_XY, device, num_test_batch, -1, sigma, average)
 
 
